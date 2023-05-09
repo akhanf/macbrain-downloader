@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const axios = require('axios')
 const xml2js = require('xml2js')
 const sharp = require('sharp')
@@ -5,9 +7,55 @@ const fs = require('fs')
 const path = require('path')
 const cheerio = require('cheerio')
 
-async function getTileSources (baseURL) {
+const { program } = require('commander');
+
+// Set the version of your CLI (optional)
+program.version('0.1.0');
+
+// Define your command-line options
+program
+  .requiredOption('-b, --base-url <url>', 'Base URL')
+  .requiredOption('-s, --subject <subject>', 'Subject')
+  .requiredOption('-t, --stain <stain>', 'Stain')
+  .requiredOption('-d, --dspow <number>', 'Downsample Power of 2', parseInt);
+
+// Parse the command-line arguments
+program.parse(process.argv);
+
+// Access the values of the options
+const { baseUrl, subject, stain, dspow } = program.opts();
+
+console.log('Base URL:', baseUrl);
+console.log('Subject:', subject);
+console.log('Stain:', stain);
+console.log('Downsample Power (e.g. 6 to downsample by 2^6):', dspow);
+
+
+const downsample = 2 ** dspow
+
+let tileSources
+
+getTileSources(baseUrl)
+  .then((fetchedTileSources) => {
+    tileSources = fetchedTileSources
+    console.log(tileSources)
+
+    fs.mkdir(`images/sub-${subject}`, { recursive: true }, (err) => {
+      if (err) throw err
+    })
+
+    tileSources.forEach((dziURL, slice) => {
+      console.log(`Slice: ${slice}, URL: ${dziURL}`)
+      const formattedSlice = String(slice).padStart(3, '0') // "005"
+      downloadImage(dziURL, dspow, `images/sub-${subject}/sub-${subject}_stain-${stain}_downsample-${downsample}_slice-${formattedSlice}.jpg`)
+    })
+  })
+  .catch(error => console.error(error))
+
+
+async function getTileSources (baseUrl) {
   try {
-    const response = await axios.get(baseURL)
+    const response = await axios.get(baseUrl)
     const html = response.data
     const regex = /tileSources:\s*"([^"]+\/[0-9]+\.dzi)"/
     const $ = cheerio.load(html)
@@ -25,7 +73,7 @@ async function getTileSources (baseURL) {
         console.log(match)
         console.log('Match found:', match[0])
         console.log('Value:', match[1])
-        tileSources.push(path.join(baseURL, match[1]))
+        tileSources.push(path.join(baseUrl, match[1]))
       }
     })
 
@@ -121,28 +169,3 @@ async function downloadImage (dziUrl, dspow, outJPEG) {
   await canvas.toFile(outJPEG)
 }
 
-const subject = 'B63'
-const stain = 'CB'
-const dspow = 7
-const baseURL = 'https://macbraingallery.yale.edu/collection6/B63-CB'
-
-const downsample = 2 ** dspow
-
-let tileSources
-
-getTileSources(baseURL)
-  .then((fetchedTileSources) => {
-    tileSources = fetchedTileSources
-    console.log(tileSources)
-
-    fs.mkdir(`images/sub-${subject}`, { recursive: true }, (err) => {
-      if (err) throw err
-    })
-
-    tileSources.forEach((dziURL, slice) => {
-      console.log(`Slice: ${slice}, URL: ${dziURL}`)
-      const formattedSlice = String(slice).padStart(3, '0') // "005"
-      downloadImage(dziURL, dspow, `images/sub-${subject}/sub-${subject}_stain-${stain}_downsample-${downsample}_slice-${formattedSlice}.jpg`)
-    })
-  })
-  .catch(error => console.error(error))
