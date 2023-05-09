@@ -7,29 +7,28 @@ const fs = require('fs')
 const path = require('path')
 const cheerio = require('cheerio')
 
-const { program } = require('commander');
+const { program } = require('commander')
 
 // Set the version of your CLI (optional)
-program.version('0.1.0');
+program.version('0.1.0')
 
 // Define your command-line options
 program
   .requiredOption('-b, --base-url <url>', 'Base URL')
   .requiredOption('-s, --subject <subject>', 'Subject')
   .requiredOption('-t, --stain <stain>', 'Stain')
-  .requiredOption('-d, --dspow <number>', 'Downsample Power of 2', parseInt);
+  .requiredOption('-d, --dspow <number>', 'Downsample Power of 2', parseInt)
 
 // Parse the command-line arguments
-program.parse(process.argv);
+program.parse(process.argv)
 
 // Access the values of the options
-const { baseUrl, subject, stain, dspow } = program.opts();
+const { baseUrl, subject, stain, dspow } = program.opts()
 
-console.log('Base URL:', baseUrl);
-console.log('Subject:', subject);
-console.log('Stain:', stain);
-console.log('Downsample Power (e.g. 6 to downsample by 2^6):', dspow);
-
+console.log('Base URL:', baseUrl)
+console.log('Subject:', subject)
+console.log('Stain:', stain)
+console.log('Downsample Power (e.g. 6 to downsample by 2^6):', dspow)
 
 const downsample = 2 ** dspow
 
@@ -51,7 +50,6 @@ getTileSources(baseUrl)
     })
   })
   .catch(error => console.error(error))
-
 
 async function getTileSources (baseUrl) {
   try {
@@ -168,4 +166,3 @@ async function downloadImage (dziUrl, dspow, outJPEG) {
   // Save the final image
   await canvas.toFile(outJPEG)
 }
-
