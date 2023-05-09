@@ -3,6 +3,47 @@ const xml2js = require('xml2js');
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
+const cheerio = require('cheerio');
+
+async function getTileSources(base_url) {
+
+
+  const regex = /const myVar = '(.*?)';/; // Replace with the regex pattern you want to match
+   
+  try {
+    const response = await axios.get(base_url);
+    const html = response.data;
+      //  const regex = /tileSources:\s*"([^"]+)"/g;
+    const regex = /tileSources:\s*"([^"]+\/[0-9]+\.dzi)"/;
+    const $ = cheerio.load(html);
+
+     tileSources = [];
+
+    $('script[type="text/javascript"]').each((index, element) => {
+      const scriptContent = $(element).html();
+     
+      console.log(scriptContent)
+
+        const match = scriptContent.match(regex);
+
+
+      if (match) {
+        console.log(match)
+        console.log('Match found:', match[0]);
+        console.log('Value:', match[1]);
+        tileSources.push(path.join(base_url,match[1]))
+      }
+    });
+
+      console.log(tileSources.length)
+      return tileSources
+  }   catch (error) {
+    console.error('Error fetching the URL:', error.message);
+  }
+
+  }
+
+
 
 
 async function findMaxZoomLevel(dziUrl, format) {
@@ -119,13 +160,31 @@ async function listDziUrls(base, start, end) {
   }
   return urls;
 }
-
+/*
 let subject='B61';
 let stain='CB';
+let start_ind=5627
+let end_ind=6000
+let dspow=7;
+*/
+let subject='B63';
+let stain='CB';
+let start_ind=3810
+let end_ind=3917
+let dspow=7;
+let base_url = 'https://macbraingallery.yale.edu/collection6/B63-CB'
 
-let dspow=8;
 
 let downsample = 2**dspow
+
+
+
+let tileSources;
+
+getTileSources(base_url)
+  .then((fetchedTileSources) => {
+    tileSources = fetchedTileSources;
+    console.log(tileSources);
 
 
 fs.mkdir(`images/sub-${subject}`, { recursive: true }, (err) => {
@@ -133,12 +192,8 @@ fs.mkdir(`images/sub-${subject}`, { recursive: true }, (err) => {
 });
 
 
-listDziUrls(`https://macbraingallery.yale.edu/slides2/${subject}-${stain}/`, 5627, 6000)
-  .then(dzi_urls => {
-      console.log(dzi_urls)
 
-
-dzi_urls.forEach((dzi_url, slice) => {
+tileSources.forEach((dzi_url, slice) => {
   console.log(`Slice: ${slice}, URL: ${dzi_url}`);
   let formattedSlice = String(slice).padStart(3, '0');  // "005"
   downloadImage(dzi_url,dspow,`images/sub-${subject}/sub-${subject}_stain-${stain}_downsample-${downsample}_slice-${formattedSlice}.jpg`)
