@@ -18,17 +18,19 @@ program
   .requiredOption('-s, --subject <subject>', 'Subject')
   .requiredOption('-t, --stain <stain>', 'Stain')
   .requiredOption('-d, --dspow <number>', 'Downsample Power of 2', parseInt)
+  .requiredOption('-o, --out-dir <path>', 'Output directory')
 
 // Parse the command-line arguments
 program.parse(process.argv)
 
 // Access the values of the options
-const { baseUrl, subject, stain, dspow } = program.opts()
+const { baseUrl, subject, stain, dspow, outDir } = program.opts()
 
 console.log('Base URL:', baseUrl)
 console.log('Subject:', subject)
 console.log('Stain:', stain)
 console.log('Downsample Power (e.g. 6 to downsample by 2^6):', dspow)
+console.log('Output directory:', outDir)
 
 const downsample = 2 ** dspow
 
@@ -39,14 +41,15 @@ getTileSources(baseUrl)
     tileSources = fetchedTileSources
     console.log(tileSources)
 
-    fs.mkdir(`images/sub-${subject}`, { recursive: true }, (err) => {
+    let subDir =  `${outDir}/sub-${subject}/sub-${subject}_stain-${stain}_downsample-${downsample}`
+    fs.mkdir(subDir, { recursive: true }, (err) => {
       if (err) throw err
     })
 
     tileSources.forEach((dziURL, slice) => {
       console.log(`Slice: ${slice}, URL: ${dziURL}`)
       const formattedSlice = String(slice).padStart(3, '0') // "005"
-      downloadImage(dziURL, dspow, `images/sub-${subject}/sub-${subject}_stain-${stain}_downsample-${downsample}_slice-${formattedSlice}.jpg`)
+      downloadImage(dziURL, dspow, `${subDir}/sub-${subject}_stain-${stain}_downsample-${downsample}_slice-${formattedSlice}.jpg`)
     })
   })
   .catch(error => console.error(error))
